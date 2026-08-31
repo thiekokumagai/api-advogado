@@ -1,0 +1,118 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  LAWYER
+}
+
+model Office {
+  id        String   @id @default(uuid())
+  name      String
+  subdomain String   @unique
+  cnpj      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users         User[]
+  assistants    Assistant[]
+  conversations Conversation[]
+
+  @@map("offices")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  officeId     String
+  name         String
+  email        String   @unique
+  password     String
+  role         Role     @default(LAWYER)
+  refreshToken String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  office        Office         @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+
+  @@map("users")
+}
+
+model Assistant {
+  id           String   @id @default(uuid())
+  officeId     String?
+  name         String
+  icon         String   @default("FileText")
+  description  String
+  systemPrompt String   @db.Text
+  category     String   @default("Geral")
+  isActive     Boolean  @default(true)
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  office        Office?        @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+
+  @@map("assistants")
+}
+
+model Conversation {
+  id          String   @id @default(uuid())
+  officeId    String
+  userId      String
+  assistantId String
+  title       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  office      Office       @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assistant   Assistant    @relation(fields: [assistantId], references: [id], onDelete: Cascade)
+  messages    Message[]
+  attachments Attachment[]
+
+  @@index([officeId, userId])
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  role           String       // "user" | "assistant" | "system"
+  content        String       @db.Text
+  tokensUsed     Int?
+  createdAt      DateTime     @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  attachments  Attachment[]
+
+  @@index([conversationId])
+  @@map("messages")
+}
+
+model Attachment {
+  id             String   @id @default(uuid())
+  conversationId String
+  messageId      String?
+  fileName       String
+  fileType       String   // "pdf" | "docx"
+  fileSize       Int
+  filePath       String
+  extractedText  String?  @db.Text
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  message      Message?     @relation(fields: [messageId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId])
+  @@map("attachments")
+}
