@@ -4,10 +4,14 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser, UserPayload } from './decorators/current-user.decorator';
+import { PushNotificationService } from '../../services/push-notification.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly pushNotificationService: PushNotificationService,
+  ) {}
 
   @Post('register')
   register(@Body() dto: RegisterDto) {
@@ -28,5 +32,14 @@ export class AuthController {
   @Get('me')
   getMe(@CurrentUser() user: UserPayload) {
     return this.authService.getMe(user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('web-push-subscription')
+  updateWebPushSubscription(
+    @CurrentUser() user: UserPayload,
+    @Body('subscription') subscription: any,
+  ) {
+    return this.pushNotificationService.updateSubscription(user.sub, subscription);
   }
 }
