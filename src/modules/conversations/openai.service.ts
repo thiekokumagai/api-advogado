@@ -33,11 +33,24 @@ export class OpenAiService {
     let finalSystemPrompt = systemPrompt;
 
     if (attachments.length > 0) {
-      finalSystemPrompt += '\n\n--- DOCUMENTOS ANEXADOS À CONVERSA PARA CONSULTA ---\n';
+      finalSystemPrompt += '\n\n==================================================\n';
+      finalSystemPrompt += 'INSTRUÇÃO DE ACESSO A DOCUMENTOS ANEXADOS:\n';
+      finalSystemPrompt += 'O usuário enviou arquivo(s) PDF/DOCX para esta conversa. O sistema JÁ EXTRAIU O TEXTO INTEGRAL de cada documento e forneceu a seguir.\n';
+      finalSystemPrompt += 'Você TEM ACESSO DIRETO ao conteúdo textual completo desses anexos. NUNCA RESPONDA dizendo que não pode acessar ou analisar arquivos diretamente, pois todo o texto dos documentos já está disponível abaixo:\n';
+      finalSystemPrompt += '==================================================\n';
+
       attachments.forEach((att, idx) => {
-        finalSystemPrompt += `\n[DOCUMENTO ${idx + 1}: ${att.fileName}]\n${att.extractedText || '(Sem texto extraível)'}\n`;
+        finalSystemPrompt += `\n--- ARQUIVO ANEXADO Nº ${idx + 1}: ${att.fileName} ---\n`;
+        finalSystemPrompt += `Conteúdo do arquivo:\n"""\n${att.extractedText || '(Sem texto extraível no arquivo)'}\n"""\n`;
       });
-      finalSystemPrompt += '\n--- FIM DOS DOCUMENTOS ANEXADOS ---\nUtilize as informações dos documentos anexados acima prioritariamente em sua resposta quando pertinente.';
+
+      finalSystemPrompt += '==================================================\n';
+      finalSystemPrompt += 'Examine o texto dos documentos anexados acima e utilize-o como base principal para elaborar a resposta, petição, análise ou parecer solicitado pelo usuário.\n';
+    }
+
+    let finalUserMessage = currentMessage;
+    if (attachments.length > 0) {
+      finalUserMessage = `${currentMessage}\n\n[Analise os documentos anexados: ${attachments.map((a) => a.fileName).join(', ')}]`;
     }
 
     const messagesPayload: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
@@ -46,7 +59,7 @@ export class OpenAiService {
         role: h.role === 'assistant' ? ('assistant' as const) : ('user' as const),
         content: h.content,
       })),
-      { role: 'user', content: currentMessage },
+      { role: 'user', content: finalUserMessage },
     ];
 
     if (!this.openai) {
