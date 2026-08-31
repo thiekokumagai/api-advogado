@@ -1,21 +1,35 @@
-import { Injectable, Scope } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AsyncLocalStorage } from 'async_hooks';
 
-@Injectable({ scope: Scope.REQUEST })
+export interface TenantContext {
+  officeId?: string;
+  subdomain?: string;
+}
+
+@Injectable()
 export class TenantContextService {
-  private officeId: string | null = null;
+  private readonly asyncLocalStorage = new AsyncLocalStorage<TenantContext>();
 
-  setOfficeId(officeId: string) {
-    this.officeId = officeId;
+  run<R>(context: TenantContext, callback: () => R): R {
+    return this.asyncLocalStorage.run(context, callback);
+  }
+
+  setOfficeId(officeId: string): void {
+    const store = this.asyncLocalStorage.getStore();
+    if (store) {
+      store.officeId = officeId;
+    }
   }
 
   getOfficeId(): string {
-    if (!this.officeId) {
+    const officeId = this.asyncLocalStorage.getStore()?.officeId;
+    if (!officeId) {
       throw new Error('Tenant Office ID não definido no contexto da requisição.');
     }
-    return this.officeId;
+    return officeId;
   }
 
   hasOfficeId(): boolean {
-    return !!this.officeId;
+    return !!this.asyncLocalStorage.getStore()?.officeId;
   }
 }
