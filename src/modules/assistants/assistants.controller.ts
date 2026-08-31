@@ -37,12 +37,14 @@ export class AssistantsController {
     @Body() dto: UpdateAssistantDto,
     @CurrentUser() user: UserPayload,
   ) {
-    return this.assistantsService.update(id, dto, user.officeId);
+    const isSuperAdmin = user.role === Role.SUPER_ADMIN;
+    return this.assistantsService.update(id, dto, user.officeId, isSuperAdmin);
   }
 
   @Roles(Role.ADMIN, Role.SUPER_ADMIN)
   @Delete(':id')
   remove(@Param('id') id: string, @CurrentUser() user: UserPayload) {
-    return this.assistantsService.remove(id, user.officeId);
+    const isSuperAdmin = user.role === Role.SUPER_ADMIN;
+    return this.assistantsService.remove(id, user.officeId, isSuperAdmin);
   }
 }

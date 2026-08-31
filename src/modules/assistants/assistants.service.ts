@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateAssistantDto } from './dto/create-assistant.dto';
 import { UpdateAssistantDto } from './dto/update-assistant.dto';
@@ -59,14 +59,19 @@ export class AssistantsService {
     });
   }
 
-  // Admin: Update assistant
-  async update(id: string, dto: UpdateAssistantDto, officeId: string) {
+  // Admin: Update assistant with office tenant verification
+  async update(id: string, dto: UpdateAssistantDto, officeId: string, isSuperAdmin = false) {
     const assistant = await this.prisma.assistant.findUnique({
       where: { id },
     });
 
     if (!assistant) {
       throw new NotFoundException('Assistente não encontrado');
+    }
+
+    // Check ownership: non-SuperAdmins can only update assistants created by their own office
+    if (!isSuperAdmin && assistant.officeId !== officeId) {
+      throw new ForbiddenException('Você não tem permissão para alterar assistentes globais ou de outro escritório');
     }
 
     return this.prisma.assistant.update({
@@ -77,14 +82,19 @@ export class AssistantsService {
     });
   }
 
-  // Admin: Delete assistant
-  async remove(id: string, officeId: string) {
+  // Admin: Delete assistant with office tenant verification
+  async remove(id: string, officeId: string, isSuperAdmin = false) {
     const assistant = await this.prisma.assistant.findUnique({
       where: { id },
     });
 
     if (!assistant) {
       throw new NotFoundException('Assistente não encontrado');
+    }
+
+    // Check ownership: non-SuperAdmins can only delete assistants created by their own office
+    if (!isSuperAdmin && assistant.officeId !== officeId) {
+      throw new ForbiddenException('Você não tem permissão para excluir assistentes globais ou de outro escritório');
     }
 
     return this.prisma.assistant.delete({
