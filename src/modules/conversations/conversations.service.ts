@@ -194,9 +194,28 @@ export class ConversationsService {
       content: m.content,
     }));
 
+    // Fetch office contract templates to provide context to the AI
+    const officeTemplates = await (this.prisma as any).contractTemplate.findMany({
+      where: { officeId },
+      select: { title: true, category: true, content: true },
+    });
+
+    let systemPromptWithTemplates = conversation.assistant.systemPrompt;
+
+    if (officeTemplates && officeTemplates.length > 0) {
+      const templatesContext = officeTemplates
+        .map(
+          (t: any, idx: number) =>
+            `--- MODELO DE CONTRATO ${idx + 1}: "${t.title}" (Categoria: ${t.category}) ---\n${t.content}`,
+        )
+        .join('\n\n');
+
+      systemPromptWithTemplates += `\n\n=== MODELOS DE CONTRATOS PADRÃO CADASTRADOS NO ESCRITÓRIO DO USUÁRIO ===\nO escritório possui ${officeTemplates.length} modelo(s) oficial(is) cadastrado(s) abaixo. Se o usuário pedir para transformar, modernizar ou gerar um contrato com base em seus modelos padrão (ou citar um nome/categoria), utilize a estrutura e cláusulas do modelo correspondente como padrão:\n\n${templatesContext}\n==================================================================`;
+    }
+
     // Generate response using assistant system prompt and attachments
     const aiResult = await this.openAiService.generateCompletion(
-      conversation.assistant.systemPrompt,
+      systemPromptWithTemplates,
       historyPayload,
       dto.content,
       conversation.attachments.map((a) => ({

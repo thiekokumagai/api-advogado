@@ -22,9 +22,10 @@ model Office {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users         User[]
-  assistants    Assistant[]
-  conversations Conversation[]
+  users             User[]
+  assistants        Assistant[]
+  conversations     Conversation[]
+  contractTemplates ContractTemplate[]
 
   @@map("offices")
 }
@@ -116,4 +117,21 @@ model Attachment {
 
   @@index([conversationId])
   @@map("attachments")
+}
+
+model ContractTemplate {
+  id          String   @id @default(uuid())
+  officeId    String
+  title       String
+  category    String   @default("Geral")
+  description String?
+  fileType    String?  // "pdf" | "docx" | "manual"
+  content     String   @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  office Office @relation(fields: [officeId], references: [id], onDelete: Cascade)
+
+  @@index([officeId])
+  @@map("contract_templates")
 }
