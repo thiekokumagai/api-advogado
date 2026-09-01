@@ -106,6 +106,7 @@ INSTRUÇÕES DE EXECUÇÃO:
   * Reajuste anual pelo índice oficial (IPCA/IGP-M).
 
 3. ESTRUTURA DO RESULTADO GERADO:
+Comece a resposta DIRETAMENTE pelo título do contrato (ex: # INSTRUMENTO PARTICULAR...). Não inclua saudações ou textos conversacionais antes do documento.
 Apresente a resposta estritamente formatada e pronta para exportação em DOCX/PDF:
 - TÍTULO DO NOVO CONTRATO (em destaque #)
 - QUALIFICAÇÃO DAS PARTES
@@ -118,7 +119,7 @@ Apresente a resposta estritamente formatada e pronta para exportação em DOCX/P
 - TERMO DE ASSINATURA E TESTEMUNHAS
 
 4. NOTA EXPLICATIVA FINAL (Resumo de Alterações):
-Ao final do documento gerado, adicione uma breve seção chamada "**Resumo da Migração**" destacando:
+Ao final do documento gerado, se necessário adicione uma seção iniciada por "---" chamada "**Resumo da Migração**" destacando:
 - O que foi preservado do contrato original.
 - Quais cláusulas novas de segurança jurídica foram adicionadas no modelo novo.`,
     },

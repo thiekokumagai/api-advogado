@@ -26,6 +26,49 @@ export interface OfficeExportInfo {
 
 @Injectable()
 export class DocumentExporterService {
+  // Helper to sanitize/clean content before generating PDF or DOCX
+  // Strips AI preamble (conversational intro) and postamble (summaries/notes)
+  cleanDocumentContent(rawContent: string): string {
+    if (!rawContent) return '';
+
+    let content = rawContent.trim();
+
+    // 1. If content is wrapped in markdown code blocks ```...```, extract content inside code block
+    const codeBlockMatch = content.match(/```(?:markdown)?\s*\n([\s\S]*?)\n```/i);
+    if (codeBlockMatch && codeBlockMatch[1]) {
+      content = codeBlockMatch[1].trim();
+    }
+
+    // 2. Remove postambles / migration summary at the bottom (e.g. "--- Resumo da Migração:", "Resumo da Migração:", "--- Observações:")
+    const postambleRegex = /\n\s*(?:---\s*\n\s*)?(?:Resumo d[aeo]|Nota Explicativa|Observaçõ?es|Caso haja necessidade|Qualquer dúvida|Espero ter ajudado)[\s\S]*$/i;
+    content = content.replace(postambleRegex, '');
+
+    // 3. Remove conversational preambles at the top (e.g. "Para realizar a migração...", "Com base em...", "Segue o contrato:")
+    const lines = content.split('\n');
+    let docStartIndex = -1;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line || line === '---') continue;
+
+      // Check if line looks like a document header/title/clause/qualificação
+      const isHeading = line.startsWith('#');
+      const isDocumentKeyword = /^(INSTRUMENTO|CONTRATO|TERMO|PETIÇÃO|AO JUÍZO|EXCELENTÍSSIMO|PARECER|PROCURAÇÃO|DECLARAÇÃO|NOTIFICAÇÃO|CLÁUSULA|QUALIFICAÇÃO|CONTRATANTE|CONTRATADO|ACORDO|ADITIVO|DISTRATO|REQUERIMENTO)\b/i.test(line);
+      const isAllCapsTitle = line.length >= 6 && line === line.toUpperCase() && /[A-Z]/.test(line);
+
+      if (isHeading || isDocumentKeyword || isAllCapsTitle) {
+        docStartIndex = i;
+        break;
+      }
+    }
+
+    if (docStartIndex > 0) {
+      content = lines.slice(docStartIndex).join('\n');
+    }
+
+    return content.trim();
+  }
+
   // Generate DOCX buffer from text content with Office Timbre and Visual Law layout
   async generateDocx(
     title: string,
@@ -84,7 +127,8 @@ export class DocumentExporterService {
     }
 
     // Document Body Content
-    const lines = content.split('\n');
+    const cleanedContent = this.cleanDocumentContent(content);
+    const lines = cleanedContent.split('\n');
     const bodyParagraphs: Paragraph[] = [];
 
     for (const line of lines) {
@@ -197,7 +241,7 @@ export class DocumentExporterService {
                   spacing: { before: 100 },
                   children: [
                     new TextRun({
-                      text: `Documento confidencial gerado pelo Portal IA Advogados • Página `,
+                      text: `Página `,
                       size: 16,
                       color: '94A3B8',
                     }),
@@ -270,7 +314,14 @@ export class DocumentExporterService {
       doc.moveDown(1);
 
       // Body Content
-      const lines = content.split('\n');
+      const cleanedContent = this.cleanDocumentContent(content);
+      const lines = cleanedContent.split('\n');
+
+      // Remove trailing empty lines to prevent PDFKit from creating extra blank pages at the end
+      while (lines.length > 0 && lines[lines.length - 1].trim() === '') {
+        lines.pop();
+      }
+
       for (const line of lines) {
         const trimmed = line.trim();
 
@@ -303,12 +354,14 @@ export class DocumentExporterService {
       for (let i = 0; i < totalPages; i++) {
         doc.switchToPage(i);
 
+        const footerY = doc.page.height - 35;
+
         // Footer line
         doc
           .strokeColor('#E2E8F0')
           .lineWidth(0.5)
-          .moveTo(50, doc.page.height - 40)
-          .lineTo(doc.page.width - 50, doc.page.height - 40)
+          .moveTo(50, footerY - 5)
+          .lineTo(doc.page.width - 50, footerY - 5)
           .stroke();
 
         doc
@@ -316,10 +369,10 @@ export class DocumentExporterService {
           .fontSize(8)
           .font('Helvetica')
           .text(
-            `Documento gerado pelo Portal IA Advogados • Página ${i + 1} de ${totalPages}`,
+            `Página ${i + 1} de ${totalPages}`,
             50,
-            doc.page.height - 30,
-            { align: 'center', width: doc.page.width - 100 },
+            footerY,
+            { align: 'center', width: doc.page.width - 100, lineBreak: false },
           );
       }
 
