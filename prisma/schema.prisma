@@ -17,10 +17,15 @@ model Office {
   id        String   @id @default(uuid())
   name      String
   subdomain String   @unique
-  cnpj      String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  cnpj         String?
+  phone        String?
+  email        String?
+  address      String?
+  headerText   String?
+  primaryColor String?  @default("#1e293b")
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   users             User[]
   assistants        Assistant[]

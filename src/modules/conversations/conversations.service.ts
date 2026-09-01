@@ -263,7 +263,7 @@ export class ConversationsService {
   ) {
     const conversation = await this.prisma.conversation.findFirst({
       where: { id: conversationId, officeId },
-      include: { assistant: true },
+      include: { assistant: true, office: true },
     });
 
     if (!conversation) {
@@ -280,12 +280,14 @@ export class ConversationsService {
 
     const title = conversation.title || 'Documento Jurídico';
     const assistantName = conversation.assistant.name;
+    const officeInfo = conversation.office;
 
     if (format === 'docx') {
       const buffer = await this.documentExporterService.generateDocx(
         title,
         message.content,
         assistantName,
+        officeInfo,
       );
       return {
         buffer,
@@ -297,6 +299,7 @@ export class ConversationsService {
         title,
         message.content,
         assistantName,
+        officeInfo,
       );
       return {
         buffer,
